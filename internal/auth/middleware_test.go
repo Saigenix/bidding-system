@@ -2,13 +2,19 @@ package auth
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/golang-jwt/jwt/v5"
 )
+
+// sampleSecret used in testing for JWT
+const sampleSecret = "sampleSecret"
 
 // TestPingRoute is a sample testcase
 func TestPingRoute(
@@ -50,10 +56,18 @@ func TestNormalRoute(
 func TestProtectedRoute(
 	t *testing.T,
 ) {
-	router := setupRouter()
 
+	router := setupRouter()
 	requestWithInvalidToken := httptest.NewRequest("GET", "/protected", nil)
 	requestWithInvalidToken.Header.Add("Authorization", "Bearer someInvalidToken")
+
+	requestWithValidToken := httptest.NewRequest("GET", "/protected", nil)
+	tokUnsigned := jwt.New(jwt.SigningMethodHS256)
+	token, err := tokUnsigned.SignedString([]byte(sampleSecret))
+	if err != nil {
+		t.Fatal(err)
+	}
+	requestWithValidToken.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	tests := []struct {
 		name           string
@@ -65,12 +79,18 @@ func TestProtectedRoute(
 			name:           "No token",
 			req:            httptest.NewRequest("GET", "/protected", nil),
 			wantStatusCode: 401,
-			wantBody:       jsonError("Unauthorized: Token not found")},
+			wantBody:       jsonError(ErrMissingToken)},
 		{
 			name:           "Invalid token",
 			req:            requestWithInvalidToken,
 			wantStatusCode: 401,
-			wantBody:       jsonError("Unauthorized: Invalid token"),
+			wantBody:       jsonError(fmt.Errorf("%s: token contains an invalid number of segments", jwt.ErrTokenMalformed)),
+		},
+		{
+			name:           "Valid token",
+			req:            requestWithValidToken,
+			wantStatusCode: 200,
+			wantBody:       "protected",
 		},
 	}
 
@@ -95,7 +115,7 @@ func setupRouter() *gin.Engine {
 	})
 
 	r.GET("/normal", normalRoute)
-	r.GET("/protected", AuthMiddleware(), protectedRoute)
+	r.GET("/protected", JWTMiddleware(), protectedRoute)
 
 	return r
 }
@@ -109,10 +129,10 @@ func protectedRoute(c *gin.Context) {
 }
 
 func jsonError(
-	message string,
+	err error,
 ) string {
 	res := gin.H{
-		"error": message,
+		"error": err.Error(),
 	}
 
 	b, _ := json.Marshal(res)
