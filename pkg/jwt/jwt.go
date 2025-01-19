@@ -43,6 +43,7 @@ func NewJWTGenerator(secret []byte, opts ...JWTGenOpts) JWTGenerator {
 		expiration: 10 * time.Minute, // Default expiration time
 		algorithm:  jwt.SigningMethodHS256,
 		secret:     secret,
+		claims:     jwt.MapClaims{},
 	}
 
 	for _, opt := range opts {
@@ -97,12 +98,10 @@ func (g JWTGenerator) GenerateToken(userID string, opts ...JWTGenOpts) (string, 
 		opt(&g)
 	}
 
-	claims := jwt.MapClaims{
-		"userID": userID,
-		"exp":    time.Now().Add(g.expiration).Unix(),
-	}
+	g.claims["userID"] = userID
+	g.claims["exp"] = time.Now().Add(g.expiration).Unix()
 
-	token := jwt.NewWithClaims(g.algorithm, claims)
+	token := jwt.NewWithClaims(g.algorithm, g.claims)
 
 	return token.SignedString(g.secret)
 
