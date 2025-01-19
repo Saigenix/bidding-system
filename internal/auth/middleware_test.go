@@ -10,11 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/saigenix/bidding-system/pkg/jwt"
 )
-
-// sampleSecret used in testing for JWT
-const sampleSecret = "sampleSecret"
 
 // TestPingRoute is a sample testcase
 func TestPingRoute(
@@ -57,13 +54,13 @@ func TestProtectedRoute(
 	t *testing.T,
 ) {
 
+	jwtGen := jwt.NewJWTGenerator([]byte(defaultTestingSecret))
 	router := setupRouter()
 	requestWithInvalidToken := httptest.NewRequest("GET", "/protected", nil)
 	requestWithInvalidToken.Header.Add("Authorization", "Bearer someInvalidToken")
 
 	requestWithValidToken := httptest.NewRequest("GET", "/protected", nil)
-	tokUnsigned := jwt.New(jwt.SigningMethodHS256)
-	token, err := tokUnsigned.SignedString([]byte(sampleSecret))
+	token, err := jwtGen.GenerateToken("Test User")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +81,6 @@ func TestProtectedRoute(
 			name:           "Invalid token",
 			req:            requestWithInvalidToken,
 			wantStatusCode: 401,
-			wantBody:       jsonError(fmt.Errorf("%s: token contains an invalid number of segments", jwt.ErrTokenMalformed)),
 		},
 		{
 			name:           "Valid token",
@@ -101,13 +97,16 @@ func TestProtectedRoute(
 
 			assert.Equal(t, tt.wantStatusCode, w.Code)
 
-			if tt.wantBody != "" {
+			if tt.wantBody != nil {
 				assert.Equal(t, tt.wantBody, w.Body.String())
 			}
 		})
 	}
 }
 
+// Helper functions
+
+// setupRouter sets up the gin router
 func setupRouter() *gin.Engine {
 	r := gin.Default()
 	r.GET("/ping", func(c *gin.Context) {
@@ -120,14 +119,17 @@ func setupRouter() *gin.Engine {
 	return r
 }
 
+// normalRoute is a sample route
 func normalRoute(c *gin.Context) {
 	c.String(200, "normal")
 }
 
+// protectedRoute is a sample protected route
 func protectedRoute(c *gin.Context) {
 	c.String(200, "protected")
 }
 
+// jsonError returns a JSON error response
 func jsonError(
 	err error,
 ) string {

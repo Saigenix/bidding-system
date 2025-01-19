@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/saigenix/bidding-system/pkg/jwt"
 )
 
 // defaultTestingSecret is the default secret used for testing
@@ -33,6 +33,9 @@ func ginError(error error) gin.H {
 //
 // If the token is invalid, it returns a 401 Unauthorized response
 func JWTMiddleware() gin.HandlerFunc {
+
+	jwtGen := jwt.NewJWTGenerator([]byte(defaultTestingSecret))
+
 	return func(c *gin.Context) {
 
 		tokenString := c.GetHeader("Authorization")
@@ -45,10 +48,7 @@ func JWTMiddleware() gin.HandlerFunc {
 		// Extract token
 		tokenString = strings.Replace(tokenString, "Bearer ", "", 1)
 
-		token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-			// TODO: Get secret from config
-			return []byte(defaultTestingSecret), nil
-		})
+		token, err := jwtGen.ParseToken(tokenString)
 
 		if err != nil {
 			c.JSON(401, ginError(err))
