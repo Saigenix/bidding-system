@@ -1,0 +1,289 @@
+openapi: 3.0.1
+info:
+  title: Auction API
+  description: API for managing auctions, bidding, user registration, and notifications.
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /auctions:
+    post:
+      summary: Create a new auction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuctionCreate'
+      responses:
+        '201':
+          description: Auction created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auction'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+    get:
+      summary: Get a list of all auctions
+      responses:
+        200:
+          description: A list of auctions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Auction'
+        500:
+          description: Internal server error
+  /auctions/{auctionId}:
+    get:
+      summary: Get details of a specific auction
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Auction details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auction'
+        '404':
+          description: Auction not found
+        '500':
+          description: Internal server error
+    put:
+      summary: Update an auction
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuctionCreate'
+      responses:
+        '200':
+          description: Auction updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auction'
+        '400':
+          description: Bad request
+        '404':
+          description: Auction not found
+        '500':
+          description: Internal server error
+    delete:
+      summary: Delete an auction
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Auction deleted successfully
+        '404':
+          description: Auction not found
+        '500':
+          description: Internal server error
+  /bids:
+    post:
+      summary: Place a bid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Bid'
+      responses:
+        '201':
+          description: Bid placed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bid'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /bids/{bidId}:
+    get:
+      summary: Get details of a specific bid
+      parameters:
+        - name: bidId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bid details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bid'
+        '404':
+          description: Bid not found
+        '500':
+          description: Internal server error
+  /notifications:
+    post:
+      summary: Notify user of outbid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Notification'
+      responses:
+        '201':
+          description: Notification sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /users/login:
+    post:
+      summary: Login a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+      responses:
+        '200':
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+  /users/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+components:
+  schemas:
+    Auction:
+      type: object
+      required:
+        - id
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+    AuctionCreate:
+      allOf:
+        - $ref: '#/components/schemas/Auction'
+      required:
+        - title
+        - description
+        - endTime
+    Bid:
+      type: object
+      required:
+        - amount
+        - userId
+        - auctionId
+      properties:
+        id:
+          type: string
+        amount:
+          type: number
+        userId:
+          type: string
+        auctionId:
+          type: string
+    User:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+    Login:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+    Notification:
+      type: object
+      required:
+        - userId
+        - message
+      properties:
+        userId:
+          type: string
+        message:
+          type: string
+securitySchemes:
+  BearerAuth:
+    type: http
+    scheme: bearer
+    bearerFormat: JWT
