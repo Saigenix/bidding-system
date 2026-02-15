@@ -1,15 +1,44 @@
-# Build the server binary
-FROM golang:1.23.3-alpine AS builder
-WORKDIR /app
+# ============================================================================
+# Multi-stage Dockerfile for Bidding System SDK
+# ============================================================================
+
+# ---------- Stage 1: Build ----------
+FROM golang:1.24-alpine AS builder
+
+RUN apk add --no-cache git ca-certificates
+
+WORKDIR /src
+
+# Cache dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Build
 COPY . .
-RUN go mod tidy
-RUN go build -o build/app ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" -o /bin/bidding-server ./cmd/server
 
-# The final image
-FROM scratch
-COPY --from=builder /app/build/app /app
+# ---------- Stage 2: Runtime ----------
+FROM alpine:3.20
 
-ENV PORT=80
-EXPOSE ${PORT}
+RUN apk add --no-cache ca-certificates tzdata
 
-CMD ["/app"]
+# Non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+WORKDIR /app
+
+# Copy binary and migration files
+COPY --from=builder /bin/bidding-server .
+COPY migrations/ ./migrations/
+
+# Switch to non-root
+USER appuser
+
+ENV SERVER_PORT=8080
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD wget -qO- http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["./bidding-server"]

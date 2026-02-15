@@ -1,0 +1,88 @@
+# ============================================================================
+# Default values for bidding-system Helm chart
+# ============================================================================
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/saigenix/bidding-system
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# ---------- Application ----------
+app:
+  port: 8080
+  logLevel: info
+  jwt:
+    secret: change-me-to-a-strong-random-secret
+    expirationHour: 24
+
+# ---------- PostgreSQL ----------
+postgresql:
+  enabled: true
+  host: ""          # Only used when enabled=false (external DB)
+  port: "5432"
+  user: postgres
+  password: password
+  database: bidding
+  sslmode: disable
+  maxConns: 25
+  minConns: 5
+
+# ---------- Service ----------
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+# ---------- Ingress ----------
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: bidding.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# ---------- Resources ----------
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# ---------- Autoscaling ----------
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+# ---------- Health Checks ----------
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 15
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# ---------- Pod ----------
+nodeSelector: {}
+tolerations: []
+affinity: {}

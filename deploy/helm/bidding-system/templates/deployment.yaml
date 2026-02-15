@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "bidding-system.fullname" . }}
+  labels:
+    {{- include "bidding-system.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "bidding-system.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "bidding-system.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.app.port }}
+              protocol: TCP
+          env:
+            - name: SERVER_PORT
+              value: {{ .Values.app.port | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.app.logLevel }}
+            - name: JWT_EXPIRATION_HOUR
+              value: {{ .Values.app.jwt.expirationHour | quote }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bidding-system.fullname" . }}-secret
+                  key: jwt-secret
+            - name: DB_HOST
+              {{- if .Values.postgresql.enabled }}
+              value: {{ include "bidding-system.fullname" . }}-postgresql
+              {{- else }}
+              value: {{ .Values.postgresql.host }}
+              {{- end }}
+            - name: DB_PORT
+              value: {{ .Values.postgresql.port | quote }}
+            - name: DB_USER
+              value: {{ .Values.postgresql.user }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bidding-system.fullname" . }}-secret
+                  key: db-password
+            - name: DB_NAME
+              value: {{ .Values.postgresql.database }}
+            - name: DB_SSLMODE
+              value: {{ .Values.postgresql.sslmode }}
+            - name: DB_MAX_CONNS
+              value: {{ .Values.postgresql.maxConns | quote }}
+            - name: DB_MIN_CONNS
+              value: {{ .Values.postgresql.minConns | quote }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

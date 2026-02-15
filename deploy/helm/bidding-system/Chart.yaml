@@ -1,0 +1,14 @@
+apiVersion: v2
+name: bidding-system
+description: A pluggable, real-time bidding system SDK
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - bidding
+  - auction
+  - real-time
+  - golang
+maintainers:
+  - name: Saigenix
+    url: https://github.com/saigenix

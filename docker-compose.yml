@@ -1,19 +1,74 @@
+# ============================================================================
+# Docker Compose — Bidding System SDK
+# ============================================================================
+# Usage:
+#   docker compose up -d          Start all services
+#   docker compose logs -f app    Follow app logs
+#   docker compose down -v        Stop and remove volumes
+# ============================================================================
+
 services:
-  # The bidding-system service
-  bidding-systems:
-    build: .
-    env_file:
-      - .env
+  # ---------- PostgreSQL ----------
+  postgres:
+    image: postgres:16-alpine
+    container_name: bidding-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: bidding
     ports:
-      - "8000:80"
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bidding"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-    # volumes:
+  # ---------- Migrations ----------
+  migrate:
+    image: migrate/migrate:v4.17.0
+    container_name: bidding-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+    command: >
+      -path=/migrations
+      -database=postgres://postgres:password@postgres:5432/bidding?sslmode=disable
+      up
+    restart: "no"
 
-    # healthcheck:
-    #   test: ["CMD-SHELL", "<TEST SCRIPT OR COMMAND>"]
-    #   interval: 2s
-    #   timeout: 20s
-    #   retries: 3
+  # ---------- Application ----------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bidding-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      SERVER_PORT: "8080"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: bidding
+      DB_SSLMODE: disable
+      DB_MAX_CONNS: "25"
+      DB_MIN_CONNS: "5"
+      JWT_SECRET: change-me-to-a-strong-random-secret
+      JWT_EXPIRATION_HOUR: "24"
+      LOG_LEVEL: info
+    ports:
+      - "8080:8080"
 
-    # post_start:
-    #   - command: [ "migration_script" ]
+volumes:
+  postgres_data:

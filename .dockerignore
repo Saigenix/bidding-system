@@ -1,1 +1,28 @@
+# Version control
 .git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Build artifacts
+*.exe
+*.out
+coverage.*
+
+# Environment
+.env
+
+# Docs (not needed in image)
+docs/
+*.md
+LICENSE
+
+# CI/CD
+.github/
+
+# Helm
+deploy/

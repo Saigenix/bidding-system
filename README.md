@@ -48,6 +48,45 @@ Server runs at `http://localhost:8080`. See all commands with `make help`.
 
 ---
 
+## Docker
+
+The fastest way to get a fully working stack (PostgreSQL + migrations + app):
+
+```bash
+# Start everything
+docker compose up -d
+
+# Follow app logs
+docker compose logs -f app
+
+# Stop and clean up
+docker compose down -v
+```
+
+This spins up:
+
+| Container | Description | Port |
+|-----------|-------------|------|
+| `bidding-postgres` | PostgreSQL 16 (Alpine) | `5432` |
+| `bidding-migrate` | Runs schema migrations then exits | — |
+| `bidding-app` | Bidding System server | `8080` |
+
+The app won't start until PostgreSQL is healthy and migrations have completed.
+
+### Build image only
+
+```bash
+# Build
+docker build -t bidding-system .
+
+# Run (requires external PostgreSQL)
+docker run -p 8080:8080 --env-file .env bidding-system
+```
+
+> **Tip:** Copy `.env.example` to `.env` and adjust values before running.
+
+---
+
 ## Tech Stack
 
 | Component | Technology |
@@ -83,10 +122,16 @@ Full details → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 ├── pkg/                 → Shared packages (db, logger, router)
 ├── sdk/                 → Public SDK interface
 ├── migrations/          → SQL schema migrations
-└── docs/
-    ├── swagger/         → Generated Swagger/OpenAPI docs
-    ├── ARCHITECTURE.md  → Architecture deep dive
-    └── PROJECT_INFO.md  → LLM context file
+├── deploy/
+│   └── helm/            → Helm chart for Kubernetes
+├── docs/
+│   ├── swagger/         → Generated Swagger/OpenAPI docs
+│   ├── ARCHITECTURE.md  → Architecture deep dive
+│   └── PROJECT_INFO.md  → LLM context file
+├── .github/workflows/   → CI pipeline (lint, test, build)
+├── Dockerfile           → Multi-stage production build
+├── docker-compose.yml   → Full local stack (Postgres + app)
+└── .env.example         → Environment variable template
 ```
 
 ---
@@ -239,12 +284,16 @@ make build            Build binary
 make test             Run tests
 make test-cover       Run tests with coverage
 make lint             Format + vet
+make fmt-check        Check formatting (CI)
+make ci               Run full CI pipeline locally
 make swagger          Generate Swagger docs
 make swagger-install  Install swag CLI
 make db-up            Start PostgreSQL (Docker)
 make db-down          Stop PostgreSQL
 make migrate-up       Apply migrations
 make migrate-down     Rollback migrations
+make docker-build     Build Docker image
+make docker-run       Run Docker container
 make setup            Full first-time setup
 make help             Show all commands
 ```
