@@ -53,6 +53,13 @@ fmt:
 	go fmt ./...
 	@echo "✓ Formatted"
 
+## fmt-check: Check formatting without modifying files (for CI)
+.PHONY: fmt-check
+fmt-check:
+	@echo "▶ Checking formatting..."
+	@test -z "$$(gofmt -l .)" || (echo "✗ The following files are not formatted:" && gofmt -l . && exit 1)
+	@echo "✓ All files formatted"
+
 ## vet: Run go vet
 .PHONY: vet
 vet:
@@ -173,6 +180,12 @@ setup: tidy db-up
 	@echo "  Run 'make run' to start the server"
 	@echo "============================================"
 
+## ci: Run all CI checks (format, vet, test)
+.PHONY: ci
+ci: fmt-check vet test
+	@echo ""
+	@echo "✓ All CI checks passed!"
+
 ## all: Build and run
 .PHONY: all
 all: lint build run
@@ -198,6 +211,8 @@ help:
 	@echo "  make lint             Format + vet"
 	@echo "  make test             Run tests"
 	@echo "  make test-cover       Run tests with coverage"
+	@echo "  make fmt-check        Check formatting (CI)"
+	@echo "  make ci               Run all CI checks"
 	@echo ""
 	@echo "Database:"
 	@echo "  make db-up            Start PostgreSQL (Docker)"
