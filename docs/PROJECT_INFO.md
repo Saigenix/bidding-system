@@ -42,6 +42,7 @@ bidding-system/
 │   │   ├── user.go                   User entity
 │   │   ├── product.go                Product entity
 │   │   ├── auction.go                Auction entity (has Status enum + helpers)
+│   │   ├── auction_test.go           Tests for IsActive/HasEnded helpers
 │   │   ├── bid.go                    Bid entity
 │   │   └── repository.go            All repository interfaces (ports)
 │   │
@@ -53,22 +54,29 @@ bidding-system/
 │   │
 │   ├── service/                    ← Business logic. Depends ONLY on domain interfaces.
 │   │   ├── auth.go                   JWT generation, bcrypt, login/register
+│   │   ├── auth_test.go              Auth service unit tests
 │   │   ├── product.go                Product CRUD
+│   │   ├── product_test.go           Product service unit tests
 │   │   ├── auction.go                Auction lifecycle (create/start/end)
-│   │   └── bid.go                    Bid placement with validation
+│   │   ├── auction_test.go           Auction service unit tests
+│   │   ├── bid.go                    Bid placement with validation
+│   │   └── bid_test.go               Bid service unit tests
 │   │
-│   ├── handler/                    ← Gin HTTP handlers. Parse request → call service → JSON response.
+│   ├── handler/                    ← Gin HTTP handlers (Swagger annotated).
 │   │   ├── auth.go                   POST /auth/register, POST /auth/login
 │   │   ├── product.go                GET/POST /products
 │   │   ├── auction.go                GET/POST /auctions, start/end
 │   │   └── bid.go                    POST bids, SSE stream, WebSocket
+│   │
+│   ├── mocks/                      ← Mock repositories for unit testing.
+│   │   └── repositories.go          In-memory implementations of all repo interfaces
 │   │
 │   └── auth/middleware.go          ← JWT middleware for Gin
 │
 ├── pkg/
 │   ├── db/db.go                    ← pgxpool connection manager
 │   ├── logger/logger.go            ← Zerolog logger factory
-│   └── web/router.go               ← Gin router setup (routes, CORS, middleware)
+│   └── web/router.go               ← Gin router setup (routes, CORS, Swagger, middleware)
 │
 ├── sdk/
 │   ├── engine.go                   ← Public SDK. Creates repos + services. Has convenience methods.
@@ -79,10 +87,14 @@ bidding-system/
 │   └── 001_init.down.sql           ← Drops all tables
 │
 ├── docs/
+│   ├── swagger/                    ← Generated Swagger/OpenAPI documentation
+│   │   ├── docs.go                   Go package for embedding Swagger specs
+│   │   ├── swagger.json              OpenAPI 2.0 JSON spec
+│   │   └── swagger.yaml              OpenAPI 2.0 YAML spec
 │   ├── ARCHITECTURE.md             ← Architecture deep dive
 │   └── PROJECT_INFO.md             ← This file
 │
-├── Makefile                        ← make run, make build, make test, etc.
+├── Makefile                        ← make run, make build, make test, make swagger, etc.
 ├── CONTRIBUTING.md                 ← Contribution guidelines
 └── README.md                       ← User-facing documentation
 ```
@@ -115,6 +127,12 @@ pending → active → ended
 3. Bid amount must be strictly greater than auction.current_price
 4. After placing bid, auction.current_price is updated
 
+### Testing Strategy
+- **Mock repositories** (`internal/mocks/`) — in-memory implementations of all repository interfaces
+- **Service-layer tests** — test business logic without a database, using mock repos
+- **Domain-layer tests** — test entity helper methods (e.g., `IsActive`, `HasEnded`)
+- Run: `make test` or `go test ./... -v`
+
 ---
 
 ## Important Dependencies
@@ -130,6 +148,8 @@ pending → active → ended
 | Zerolog | `github.com/rs/zerolog` | Structured logging |
 | WebSocket | `github.com/gorilla/websocket` | Real-time bidding |
 | Migrate | `github.com/golang-migrate/migrate/v4` | DB schema migrations |
+| Swagger | `github.com/swaggo/gin-swagger` | OpenAPI docs generation & UI |
+| Swag | `github.com/swaggo/swag` | Swagger annotation parser |
 
 ---
 
@@ -158,7 +178,9 @@ pending → active → ended
 make run            # Start dev server
 make build          # Compile binary
 make test           # Run tests
+make test-cover     # Run tests with coverage report
 make lint           # Format + vet
+make swagger        # Regenerate Swagger docs
 make db-up          # Start PostgreSQL in Docker
 make migrate-up     # Apply migrations
 make setup          # Full first-time setup
@@ -167,6 +189,8 @@ make setup          # Full first-time setup
 ---
 
 ## API Quick Reference
+
+**Swagger UI**: `http://localhost:8080/swagger/index.html`
 
 **Public:**
 - `POST /auth/register` — `{"email":"...","password":"..."}`
@@ -190,7 +214,7 @@ make setup          # Full first-time setup
 - SSE and WebSocket currently use polling (2s interval) — needs pub/sub (Redis/NATS)
 - No background worker to auto-end expired auctions
 - No rate limiting
-- No unit tests yet
+- No integration tests (only service + domain unit tests)
 - WebSocket `CheckOrigin` allows all origins (restrict in production)
 - No pagination on list endpoints
 - Product ownership is not validated when creating auctions

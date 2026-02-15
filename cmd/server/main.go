@@ -11,7 +11,29 @@ import (
 
 	"github.com/saigenix/bidding-system/pkg/web"
 	"github.com/saigenix/bidding-system/sdk"
+
+	_ "github.com/saigenix/bidding-system/docs/swagger"
 )
+
+// @title           Bidding System API
+// @version         1.0
+// @description     A pluggable, real-time bidding system SDK. Provides auction lifecycle management, real-time bid streaming via SSE and WebSocket, and JWT-based authentication.
+// @termsOfService  https://github.com/saigenix/bidding-system
+
+// @contact.name   Saigenix
+// @contact.url    https://github.com/saigenix/bidding-system
+// @contact.email  support@saigenix.com
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:8080
+// @BasePath  /
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Enter your JWT token as: Bearer <token>
 
 func main() {
 	// Create SDK engine
@@ -56,6 +78,7 @@ func main() {
 
 	engine.GetLogger().Info().Msgf("Bidding system server is running on http://localhost:%s", port)
 	engine.GetLogger().Info().Msg("Health check: http://localhost:" + port + "/health")
+	engine.GetLogger().Info().Msg("Swagger docs: http://localhost:" + port + "/swagger/index.html")
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)

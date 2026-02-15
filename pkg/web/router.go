@@ -2,6 +2,9 @@ package web
 
 import (
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
 	"github.com/saigenix/bidding-system/internal/auth"
 	"github.com/saigenix/bidding-system/internal/handler"
 	"github.com/saigenix/bidding-system/internal/service"
@@ -33,6 +36,9 @@ func SetupRouter(
 	productHandler := handler.NewProductHandler(productService)
 	auctionHandler := handler.NewAuctionHandler(auctionService)
 	bidHandler := handler.NewBidHandler(bidService)
+
+	// Swagger documentation
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Public routes
 	authRoutes := router.Group("/auth")

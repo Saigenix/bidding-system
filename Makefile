@@ -79,6 +79,24 @@ test-cover:
 	@echo "✓ Coverage report: coverage.html"
 
 # ============================================================================
+# Swagger
+# ============================================================================
+
+## swagger: Generate Swagger documentation
+.PHONY: swagger
+swagger:
+	@echo "▶ Generating Swagger docs..."
+	swag init -g cmd/server/main.go -o docs/swagger
+	@echo "✓ Swagger docs generated at docs/swagger/"
+
+## swagger-install: Install swag CLI tool
+.PHONY: swagger-install
+swagger-install:
+	@echo "▶ Installing swag CLI..."
+	go install github.com/swaggo/swag/cmd/swag@latest
+	@echo "✓ swag CLI installed"
+
+# ============================================================================
 # Database
 # ============================================================================
 
@@ -187,6 +205,10 @@ help:
 	@echo "  make migrate-up       Apply migrations"
 	@echo "  make migrate-down     Rollback migrations"
 	@echo "  make migrate-install  Install migrate CLI"
+	@echo ""
+	@echo "Swagger:"
+	@echo "  make swagger          Generate Swagger docs"
+	@echo "  make swagger-install  Install swag CLI"
 	@echo ""
 	@echo "Docker:"
 	@echo "  make docker-build     Build Docker image"

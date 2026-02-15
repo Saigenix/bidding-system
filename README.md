@@ -26,6 +26,7 @@ The Bidding System SDK lets you **add auctions and real-time bidding** to any pl
 - 🏷️ **Auction lifecycle** (create → start → bid → end)
 - ⚡ **Real-time bid streaming** via REST, SSE, and WebSocket
 - 🧩 **Pluggable SDK** — use as a Go library or standalone server
+- 📖 **Swagger API docs** — interactive API documentation at `/swagger/index.html`
 
 ---
 
@@ -58,6 +59,8 @@ Server runs at `http://localhost:8080`. See all commands with `make help`.
 | Real-time | SSE + WebSocket |
 | Config | Viper (env-based) |
 | Logging | Zerolog |
+| API Docs | [Swagger](https://github.com/swaggo/gin-swagger) (OpenAPI 2.0) |
+| Testing | Go standard `testing` + mock repositories |
 
 Full details → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
@@ -70,15 +73,59 @@ Full details → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 ├── config/              → Configuration (Viper)
 ├── internal/
 │   ├── domain/          → Entities & interfaces (clean core)
+│   │   └── *_test.go    → Domain unit tests
 │   ├── repository/      → PostgreSQL adapters
 │   ├── service/         → Business logic
-│   ├── handler/         → REST + SSE + WebSocket handlers
-│   └── auth/            → JWT middleware
+│   │   └── *_test.go    → Service unit tests
+│   ├── handler/         → REST + SSE + WebSocket handlers (Swagger annotated)
+│   ├── auth/            → JWT middleware
+│   └── mocks/           → Mock repository implementations for testing
 ├── pkg/                 → Shared packages (db, logger, router)
 ├── sdk/                 → Public SDK interface
 ├── migrations/          → SQL schema migrations
-└── docs/                → Architecture & project docs
+└── docs/
+    ├── swagger/         → Generated Swagger/OpenAPI docs
+    ├── ARCHITECTURE.md  → Architecture deep dive
+    └── PROJECT_INFO.md  → LLM context file
 ```
+
+---
+
+## Swagger / API Docs
+
+Interactive API documentation is available at:
+
+```
+http://localhost:8080/swagger/index.html
+```
+
+To regenerate Swagger docs after modifying handler annotations:
+
+```bash
+make swagger
+```
+
+---
+
+## Testing
+
+Run the full test suite:
+
+```bash
+# Run all tests
+make test
+
+# Run tests with coverage report
+make test-cover
+```
+
+The project uses **mock repositories** (`internal/mocks/`) for unit testing the service and domain layers without requiring a database connection. Tests cover:
+
+- **Domain layer** — Auction state helpers (`IsActive`, `HasEnded`)
+- **Auth service** — Registration, login, JWT token validation
+- **Product service** — CRUD operations and error handling
+- **Auction service** — Lifecycle transitions and validation rules
+- **Bid service** — Bid placement, amount validation, winning bid
 
 ---
 
@@ -124,6 +171,8 @@ curl -X POST http://localhost:8080/auth/login \
 | `GET` | `/auctions/:id/bids` | Get all bids |
 | `GET` | `/auctions/:id/bids/stream` | **SSE** live stream |
 | `WS` | `/auctions/:id/bids/ws` | **WebSocket** |
+
+> 📖 For full request/response schemas, visit the [Swagger UI](http://localhost:8080/swagger/index.html).
 
 ---
 
@@ -188,7 +237,10 @@ Set via environment variables:
 make run              Run the server
 make build            Build binary
 make test             Run tests
+make test-cover       Run tests with coverage
 make lint             Format + vet
+make swagger          Generate Swagger docs
+make swagger-install  Install swag CLI
 make db-up            Start PostgreSQL (Docker)
 make db-down          Stop PostgreSQL
 make migrate-up       Apply migrations

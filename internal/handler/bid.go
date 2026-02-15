@@ -29,10 +29,23 @@ func NewBidHandler(bidService *service.BidService) *BidHandler {
 }
 
 type PlaceBidRequest struct {
-	AuctionID string  `json:"auction_id" binding:"required"`
-	Amount    float64 `json:"amount" binding:"required,min=0"`
+	AuctionID string  `json:"auction_id" binding:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Amount    float64 `json:"amount" binding:"required,min=0" example:"150.00"`
 }
 
+// PlaceBid godoc
+// @Summary      Place a bid
+// @Description  Place a bid on an active auction. Amount must exceed the current price.
+// @Tags         Bids
+// @Accept       json
+// @Produce      json
+// @Param        auction_id  path      string          true  "Auction ID"
+// @Param        request     body      PlaceBidRequest true  "Bid details"
+// @Success      201         {object}  domain.Bid
+// @Failure      400         {object}  ErrorResponse
+// @Failure      401         {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /auctions/{auction_id}/bids [post]
 func (h *BidHandler) PlaceBid(c *gin.Context) {
 	var req PlaceBidRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -50,6 +63,17 @@ func (h *BidHandler) PlaceBid(c *gin.Context) {
 	c.JSON(http.StatusCreated, bid)
 }
 
+// GetBids godoc
+// @Summary      Get bids for an auction
+// @Description  Retrieve all bids placed on a specific auction
+// @Tags         Bids
+// @Produce      json
+// @Param        auction_id  path      string  true  "Auction ID"
+// @Success      200         {array}   domain.Bid
+// @Failure      401         {object}  ErrorResponse
+// @Failure      500         {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /auctions/{auction_id}/bids [get]
 func (h *BidHandler) GetBids(c *gin.Context) {
 	auctionID := c.Param("auction_id")
 	bids, err := h.bidService.GetBids(c.Request.Context(), auctionID)
@@ -61,7 +85,16 @@ func (h *BidHandler) GetBids(c *gin.Context) {
 	c.JSON(http.StatusOK, bids)
 }
 
-// StreamBids handles SSE streaming of bid updates
+// StreamBids godoc
+// @Summary      Stream bid updates (SSE)
+// @Description  Server-Sent Events stream of real-time bid updates for an auction
+// @Tags         Bids
+// @Produce      text/event-stream
+// @Param        auction_id  path  string  true  "Auction ID"
+// @Success      200  {string}  string  "SSE event stream"
+// @Failure      401  {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /auctions/{auction_id}/bids/stream [get]
 func (h *BidHandler) StreamBids(c *gin.Context) {
 	auctionID := c.Param("auction_id")
 
@@ -99,6 +132,14 @@ func (h *BidHandler) StreamBids(c *gin.Context) {
 }
 
 // WebSocketHandler handles WebSocket connections for real-time bidding
+// @Summary      WebSocket bid stream
+// @Description  Bi-directional WebSocket connection for real-time bid updates
+// @Tags         Bids
+// @Param        auction_id  path  string  true  "Auction ID"
+// @Success      101  {string}  string  "WebSocket upgrade"
+// @Failure      401  {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /auctions/{auction_id}/bids/ws [get]
 func (h *BidHandler) WebSocketHandler(c *gin.Context) {
 	auctionID := c.Param("auction_id")
 

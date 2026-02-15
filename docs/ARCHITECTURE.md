@@ -135,6 +135,8 @@ Cross-cutting concerns:
 | **Migrations** | golang-migrate | `github.com/golang-migrate/migrate/v4` |
 | **WebSocket** | Gorilla WebSocket | `github.com/gorilla/websocket` |
 | **SSE** | Gin built-in | `c.SSEvent()` |
+| **API Docs** | Swagger (swaggo) | `github.com/swaggo/gin-swagger` |
+| **Testing** | Go standard + mocks | `testing` + `internal/mocks` |
 
 ---
 
@@ -230,12 +232,48 @@ bids
 
 ---
 
+## Testing
+
+### Strategy
+
+Tests use **mock repositories** (`internal/mocks/`) — in-memory implementations of the domain interfaces that don't require a database.
+
+| Layer | What's Tested | Example |
+|-------|---------------|---------|
+| Domain | Entity helpers | `Auction.IsActive()`, `Auction.HasEnded()` |
+| Service | Business logic | Bid validation, auction lifecycle, auth flows |
+
+### Running Tests
+
+```bash
+make test          # Run all tests
+make test-cover    # Run with coverage report
+```
+
+---
+
+## API Documentation (Swagger)
+
+All HTTP handlers are annotated with [swaggo](https://github.com/swaggo/swag) comments. The Swagger UI is served at `/swagger/index.html` when the server is running.
+
+To regenerate docs after modifying annotations:
+
+```bash
+make swagger
+```
+
+Generated files live in `docs/swagger/` (JSON, YAML, and Go embed package).
+
+---
+
 ## Dependency Flow
 
 ```
 main.go → sdk.Engine → services → domain interfaces ← repositories → PostgreSQL
                 ↓
           handlers → Gin router → HTTP
+                                    ↓
+                              Swagger UI (/swagger/*)
 ```
 
 **Key rule**: Arrows point inward. Outer layers depend on inner layers, never the reverse.

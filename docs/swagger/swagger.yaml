@@ -1,0 +1,586 @@
+basePath: /
+definitions:
+  domain.Auction:
+    properties:
+      createdAt:
+        type: string
+      currentPrice:
+        format: float64
+        type: number
+      endTime:
+        type: string
+      id:
+        type: string
+      productID:
+        type: string
+      startTime:
+        type: string
+      startingPrice:
+        format: float64
+        type: number
+      status:
+        $ref: '#/definitions/domain.AuctionStatus'
+    type: object
+  domain.AuctionStatus:
+    enum:
+    - pending
+    - active
+    - ended
+    type: string
+    x-enum-varnames:
+    - AuctionStatusPending
+    - AuctionStatusActive
+    - AuctionStatusEnded
+  domain.Bid:
+    properties:
+      amount:
+        format: float64
+        type: number
+      auctionID:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      userID:
+        type: string
+    type: object
+  domain.Product:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      ownerID:
+        type: string
+    type: object
+  handler.CreateAuctionRequest:
+    properties:
+      end_time:
+        example: "2026-03-02T10:00:00Z"
+        type: string
+      product_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      start_time:
+        example: "2026-03-01T10:00:00Z"
+        type: string
+      starting_price:
+        example: 100
+        minimum: 0
+        type: number
+    required:
+    - end_time
+    - product_id
+    - start_time
+    - starting_price
+    type: object
+  handler.CreateProductRequest:
+    properties:
+      description:
+        example: High-performance gaming laptop
+        type: string
+      name:
+        example: Gaming Laptop
+        type: string
+    required:
+    - name
+    type: object
+  handler.ErrorResponse:
+    properties:
+      error:
+        example: error message
+        type: string
+    type: object
+  handler.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handler.LoginResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+    type: object
+  handler.PlaceBidRequest:
+    properties:
+      amount:
+        example: 150
+        minimum: 0
+        type: number
+      auction_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    required:
+    - amount
+    - auction_id
+    type: object
+  handler.RegisterRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: password123
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handler.UserResponse:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@saigenix.com
+    name: Saigenix
+    url: https://github.com/saigenix/bidding-system
+  description: A pluggable, real-time bidding system SDK. Provides auction lifecycle
+    management, real-time bid streaming via SSE and WebSocket, and JWT-based authentication.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://github.com/saigenix/bidding-system
+  title: Bidding System API
+  version: "1.0"
+paths:
+  /auctions:
+    get:
+      description: Get a list of all auctions
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Auction'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all auctions
+      tags:
+      - Auctions
+    post:
+      consumes:
+      - application/json
+      description: Create a new auction for a product with a time window and starting
+        price
+      parameters:
+      - description: Auction details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateAuctionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Auction'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create an auction
+      tags:
+      - Auctions
+  /auctions/{auction_id}/bids:
+    get:
+      description: Retrieve all bids placed on a specific auction
+      parameters:
+      - description: Auction ID
+        in: path
+        name: auction_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Bid'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get bids for an auction
+      tags:
+      - Bids
+    post:
+      consumes:
+      - application/json
+      description: Place a bid on an active auction. Amount must exceed the current
+        price.
+      parameters:
+      - description: Auction ID
+        in: path
+        name: auction_id
+        required: true
+        type: string
+      - description: Bid details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.PlaceBidRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Bid'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Place a bid
+      tags:
+      - Bids
+  /auctions/{auction_id}/bids/stream:
+    get:
+      description: Server-Sent Events stream of real-time bid updates for an auction
+      parameters:
+      - description: Auction ID
+        in: path
+        name: auction_id
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE event stream
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Stream bid updates (SSE)
+      tags:
+      - Bids
+  /auctions/{auction_id}/bids/ws:
+    get:
+      description: Bi-directional WebSocket connection for real-time bid updates
+      parameters:
+      - description: Auction ID
+        in: path
+        name: auction_id
+        required: true
+        type: string
+      responses:
+        "101":
+          description: WebSocket upgrade
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: WebSocket bid stream
+      tags:
+      - Bids
+  /auctions/{id}:
+    get:
+      description: Get an auction by its ID
+      parameters:
+      - description: Auction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Auction'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get an auction
+      tags:
+      - Auctions
+  /auctions/{id}/end:
+    post:
+      description: Transition an auction to ended status, no more bids accepted
+      parameters:
+      - description: Auction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: End an auction
+      tags:
+      - Auctions
+  /auctions/{id}/start:
+    post:
+      description: Transition an auction from pending to active status
+      parameters:
+      - description: Auction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Start an auction
+      tags:
+      - Auctions
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate with email and password to receive a JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Login user
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account with email and password
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Auth
+  /products:
+    get:
+      description: Get a list of all available products
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Product'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all products
+      tags:
+      - Products
+    post:
+      consumes:
+      - application/json
+      description: Create a new product that can be listed for auction
+      parameters:
+      - description: Product details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a product
+      tags:
+      - Products
+  /products/{id}:
+    get:
+      description: Get a product by its ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Product'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a product
+      tags:
+      - Products
+securityDefinitions:
+  BearerAuth:
+    description: 'Enter your JWT token as: Bearer <token>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
